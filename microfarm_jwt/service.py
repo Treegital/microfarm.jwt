@@ -30,9 +30,11 @@ class JWTService(rpc.AttrHandler):
         try:
             return jwt.decode(token, self.public_key, algorithms=["RS256"])
         except jwt.exceptions.InvalidSignatureError:
-            return {"error": "Invalid token"}
+            return {"err": "Token signature could not be verified."}
         except jwt.ExpiredSignatureError:
-            return {"error": "Token expired"}
+            return {"err": "Token expired."}
+        except jwt.exceptions.InvalidTokenError:
+            return {"err": "Invalid token."}
 
 
 @cli
@@ -54,7 +56,6 @@ async def serve(config: Path, private_key: Path, public_key: Path) -> None:
         public_key_pem = f.read()
 
     if logconf := settings.get('logging'):
-        print('Applying logging configuration.')
         logging.config.dictConfigClass(logconf).configure()
 
     service = JWTService(private_key_pem, public_key_pem)
