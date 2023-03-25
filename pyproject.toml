@@ -17,6 +17,13 @@ dependencies = [
   "msgpack"
 ]
 
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-asyncio",
+  "freezegun"
+]
+
 [project.scripts]
 mfjwt = "microfarm_jwt.service:run"
 

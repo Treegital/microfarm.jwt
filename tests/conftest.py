@@ -1,0 +1,98 @@
+import asyncio
+import pytest
+import pytest_asyncio
+from aiozmq import rpc
+from microfarm_jwt.service import JWTService
+
+private_key = """-----BEGIN PRIVATE KEY-----
+MIIJQwIBADANBgkqhkiG9w0BAQEFAASCCS0wggkpAgEAAoICAQDADnDKFJFXz6yy
++gNUvt2BqBxYg/3F0wn3+51USIGUP2vCzuLenIHROvjZatsnE8PB7aa/pQPOyYAY
+t6Kbp+45JvUOldflZkggS5F/q6mqNriuO/6iygI2mMur7f4oV6RD0ZjtttXHVpTk
+ceL1N/B9U+HMK4d7xOkuracnmZqddtairanZIciX0V99FJMjr1H61uByFokeucZa
+KQD5dXV+EF5Hh1/STOMR+95cFC+U1Uq8mdf9ByDWOnXTJeng/q3/Z0IOhO63rtER
+QC/FE3Wnp6k51MAmge3Ege2h3gQnF//6p0J4e23KyDbuEfu/nwoKH8WZ4aix0Ia9
+2Xb/7zTzlXlHCZbrpJxY41M3HhPXcyIPm15S/0qQWd1pPzp+YadHCCuPud+geAYy
+HE289Xoz3PbzWdWiR09gX5p+G9sQgh6kT9l03cez8q4j+5fRVQ0WrVjXVUuG4wKi
+N2eUwZt/XoBJMX93n6nGtradcQ3eO6rW5aBpsl8AFP2jDI58OtgT3BT3x5kZGWS+
+It01JCpW/Pj9hTzDHTyeU7EJjf1j9Kf0v38PqG4E/mEVVSawP9zCWMKy3vRVe/A6
+wtlHdd2qbxYDy0DiKw/3jXnukHWlYXhRLwDWzRynV1GGpBExLj2Wib22v3DPCUg7
+e4yYqgonHlDsxa9xtL8YRYC1rEEyvwIDAQABAoICAA0IzdyBJy4WUPUNT8LleJi5
+7+vipWCoMSyB3fcgO/RzlhzbYqf+EjdrhlkRzfwpyhGJegAsCFqf7/rSzQ09s/Fw
+CetVUxjlZ1lobOBae6zVguoxoIIBg23w0nMsN0wbSpw0XOnWjKK3PGqr/12/eqm0
+KDEYS90kC46t8sLBbi4SqIAo7iE85ZAcLHFg6e2JkrRF92dMIpPnGCWlU8TFFStw
+Rp3Ee8XaOaz48unn5Xoh5wJuzysD3AAovoy32CwmIhP2jj6jBKU1uZ2vRVldjTt1
+fwrcPArrqtc5LtywpIfXXU7wdsFA4JOFzBM96DU563oCwavvFekKKyLhCpkAbeTz
+XoTmwvIvQOapdJLorGkgr2eTxqDvWB0GGcXGkwumNPvEuZcsB2E1uYggueCraFVn
+89sP4bCN8HIyhOrvPoDCSwnqOyWL8jNRVHSkf+rK5odm3BhNhCOwUXdJoz2vPiQg
+NjrnCHdZzUQ8FYtPG24M8agPj+hhyFMLfcKH4JF+p7nAjd0abEmTvFZp2e6gxY5s
+f/klB/RJH8ttZ/xcPFH/bejcRAdEAqwIy6Q20gCcklkXhraUljW/r9v3NjXSXuD+
+Ey/UEsBcE7DjTlxTQgKPB4GyjuiIMaBwjJ7rKz+Kf93UBSZFVFyC8DKnrxhTY+FQ
+Lsmzc6SUalSyP6cVGYqdAoIBAQDu3/3vozAgkkF1I+TTf5cFGMgUn4i/hYM3pE46
+XHTLlE8mzDfpSdCb+ATpJZaBgwChJtcuqZNJ+90YCYSwePocFSQGt5rnlto7sclx
+jYFvf145LtnaBvnyQmgCiAH6aMk5oevAypPQHVRrnr+pN2IRZfVYmMTol9yUg2kE
+cScGVODFLPgvp/qXaHCThyAdPjmvBttzdGPX98ZSuv+lEGrgxepfp7dKjSBVXmHm
+JUuPWIfvGEH0n6bhFQ07oiFRUosbnlOiFe+Q9VvUz5zw9c+QWKodzf6RVlGAHi55
+PkJKHZI5xgm4kvReJIDKQSx1vQZyG8Wq8HuzssqjJvEw6Nv9AoIBAQDN0zNAlL09
+lfejkG0qVsE8Ihv+czxJ28PJCEukv9OpKl3DCfRyZrehzeUWHCCCH86eYcO4UtX7
+fnYDznnFFoQhpyUZ7E7pDcYk2q9XVHTR4TKm3I7o6l4VJW8HCa+V/PFFrxN5oDIP
+4Ug1j493gSiZ1GWeuHgJdiD4bRBy+K1NE4bgBRMKY49V6X4i0EF6Nz4jEoxMciT7
+HOMjjqv5oqUeIh9GvlhHNHjBAsvZZSHkMdPCUrDN97qSqtnHqwu/pUeoBr1ksgQ7
+zg+ItO4trpm8UqwyDpue+5YSnTr1xsHvZGdG7EDhTbu0jCtHdCcUjBeG+PwJ6QD+
+dB5T/LMMBkBrAoIBAQCush+rduQGng/DFIoP5zrSHmqNMpM2xfTN55rScbV1ATTV
+wfqN4U7wEfW9cKDefKkkMhyi4p92Nv1dy/A/g2oeyZM8WmCuSBO4HnCdXAiyOyr0
+lP/7xKhc9RXN7BvOP34SaQnaSAzL4fdQcZvnrDpLUQ6aSbeQByfpcSWHex04MzDi
+4t1rNOU+f8H9EpB48n4LM++gQxmV434mGN5HoHcZhYS/ig+xNP7VkB32y4W0AuH/
+CPWLaosIB3ZTC2JkcAKOIz80xegbUmVjgKZdTtgKz90xyOoI7mDSWsBQKSkfvPqo
+x91qIAcZJocN45YZUTF6mDb6qb8+D17E7QDtbQ8dAoIBAFNy3KXDaFJu2h9TsB7p
+W6EQxz7L49aiJmf8WAbsy1kb1zX7dENpx+vvOYFUWA3J7ZCjXKH/28gChsCWVyKE
+NYAbb1xqRbgRoJNSoqKKmG57mniylbJzSz/RlIlK8QijrAKvr/qw63sqwIcOtIEk
+OZzc03KdofVcEpQGTBQBJOpKD3YGOKkOoo+Xgk+FFfcCLMw1efKImNvC44iIEMu+
+mKl19i5NgCcmbAr9Ij761NnbJdr0gcCQPvG2GWPtwm6qCTpjuSf5UOQacIvhp2uY
+Dbaf4jbNW2UC5d6YJs59DiYMFB9aLBfs1zylU+q9ehbHkcZkbnNqJ8ACvkUZAFLQ
+ug8CggEBAJJcN6m7ECXgwnRi2bdl5R6TpGpBDv+5lnC2IalDHLAc90yE3WBNq0fr
+pcvGPynA+zcgdH0UzS9i54tY0pHMnAiBgiczsW/GTlgIGxt5BObrOWlrNtRA05nS
+MWFSB0kEgH5r2hRYOq1Tqw/CBa295uC6chkHqo4mG7Lqb59wiMMG+kDKEr3t9T8h
+6cs0jHYIUXiJBt0CS12KY8ICVUmF3PA/u9LBkVRy3Yxy9vn+6RwiFur5eixazllr
+H62JXO6zcbuqjoZXBvThM8Qq3aiieTAcj3Ix1hr1hJZCjYZagTF2cV7rjUWAWZ8s
+bgUdg7TejTF6etFdLDKVmE0BMnDhU50=
+-----END PRIVATE KEY-----"""
+
+public_key = """-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAwA5wyhSRV8+ssvoDVL7d
+gagcWIP9xdMJ9/udVEiBlD9rws7i3pyB0Tr42WrbJxPDwe2mv6UDzsmAGLeim6fu
+OSb1DpXX5WZIIEuRf6upqja4rjv+osoCNpjLq+3+KFekQ9GY7bbVx1aU5HHi9Tfw
+fVPhzCuHe8TpLq2nJ5manXbWoq2p2SHIl9FffRSTI69R+tbgchaJHrnGWikA+XV1
+fhBeR4df0kzjEfveXBQvlNVKvJnX/Qcg1jp10yXp4P6t/2dCDoTut67REUAvxRN1
+p6epOdTAJoHtxIHtod4EJxf/+qdCeHttysg27hH7v58KCh/FmeGosdCGvdl2/+80
+85V5RwmW66ScWONTNx4T13MiD5teUv9KkFndaT86fmGnRwgrj7nfoHgGMhxNvPV6
+M9z281nVokdPYF+afhvbEIIepE/ZdN3Hs/KuI/uX0VUNFq1Y11VLhuMCojdnlMGb
+f16ASTF/d5+pxra2nXEN3juq1uWgabJfABT9owyOfDrYE9wU98eZGRlkviLdNSQq
+Vvz4/YU8wx08nlOxCY39Y/Sn9L9/D6huBP5hFVUmsD/cwljCst70VXvwOsLZR3Xd
+qm8WA8tA4isP94157pB1pWF4US8A1s0cp1dRhqQRMS49lom9tr9wzwlIO3uMmKoK
+Jx5Q7MWvcbS/GEWAtaxBMr8CAwEAAQ==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture(scope="module")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="module")
+async def jwt_service():
+    service = JWTService(private_key, public_key)
+    server = await rpc.serve_rpc(service, bind="inproc://test")
+    yield server
+    server.close()
+    await server.wait_closed()
+
+
+@pytest_asyncio.fixture(scope="module")
+async def jwt_client():
+    client = await rpc.connect_rpc(connect="inproc://test", timeout=0.5)
+    try:
+        yield client.call
+    finally:
+        client.close()
