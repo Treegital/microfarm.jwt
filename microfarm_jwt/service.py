@@ -18,22 +18,44 @@ class JWTService(rpc.AttrHandler):
     @rpc.method
     def get_token(self, data: dict) -> str:
         logger.info('Got jwt request.')
+        expires = datetime.now(tz=timezone.utc) + timedelta(hours=1)
         data = {
             **data,
-            "exp": datetime.now(tz=timezone.utc) + timedelta(hours=1)
+            "exp": expires
         }
-        return jwt.encode(data, self.private_key, algorithm="RS256")
+        token = jwt.encode(data, self.private_key, algorithm="RS256")
+        return {
+            "code": 200,
+            "data": {
+                'token': token,
+                'expires': expires
+            }
+        }
 
     @rpc.method
     def verify_token(self, token: str) -> dict:
         try:
-            return jwt.decode(token, self.public_key, algorithms=["RS256"])
+            decoded = jwt.decode(
+                token, self.public_key, algorithms=["RS256"])
+            return {
+                "code": 200,
+                "data": decoded
+            }
         except jwt.exceptions.InvalidSignatureError:
-            return {"err": "Token signature could not be verified."}
+            return {
+                "code": 400,
+                "message": "Token signature could not be verified."
+            }
         except jwt.ExpiredSignatureError:
-            return {"err": "Token expired."}
+           return {
+                "code": 400,
+                "message": "Token expired."
+            }
         except jwt.exceptions.InvalidTokenError:
-            return {"err": "Invalid token."}
+           return {
+                "code": 400,
+                "message": "Invalid token."
+            }
 
 
 @cli
