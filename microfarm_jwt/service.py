@@ -16,9 +16,9 @@ class JWTService(rpc.AttrHandler):
         self.public_key = public_key
 
     @rpc.method
-    def get_token(self, data: dict) -> str:
-        logger.info('Got jwt request.')
-        expires = datetime.now(tz=timezone.utc) + timedelta(hours=1)
+    def get_token(self, data: dict, delta: int = 60) -> str:
+        logger.info('Got jwt request for a new token.')
+        expires = datetime.now(tz=timezone.utc) + timedelta(minutes=delta)
         data = {
             **data,
             "exp": expires
@@ -26,10 +26,9 @@ class JWTService(rpc.AttrHandler):
         token = jwt.encode(data, self.private_key, algorithm="RS256")
         return {
             "code": 200,
-            "data": {
-                'token': token,
-                'expires': expires
-            }
+            "type": "Token",
+            "description": "JSON Web Token",
+            "body": token
         }
 
     @rpc.method
@@ -39,22 +38,30 @@ class JWTService(rpc.AttrHandler):
                 token, self.public_key, algorithms=["RS256"])
             return {
                 "code": 200,
-                "data": decoded
+                "type": "JWTInfo",
+                "description": "JWT Payload",
+                "body": decoded
             }
         except jwt.exceptions.InvalidSignatureError:
             return {
                 "code": 400,
-                "message": "Token signature could not be verified."
+                "type": "Error",
+                "description": "Token signature could not be verified",
+                "body": None
             }
         except jwt.ExpiredSignatureError:
-           return {
+            return {
                 "code": 400,
-                "message": "Token expired."
+                "type": "Error",
+                "description": "Token expired",
+                "body": None
             }
         except jwt.exceptions.InvalidTokenError:
-           return {
+            return {
                 "code": 400,
-                "message": "Invalid token."
+                "type": "Error",
+                "description": "Invalid token",
+                "body": None
             }
 
 
@@ -81,7 +88,7 @@ async def serve(config: Path, private_key: Path, public_key: Path) -> None:
 
     service = JWTService(private_key_pem, public_key_pem)
     server = await rpc.serve_rpc(service, bind=settings['rpc']['bind'])
-    print(f" [x] JWT Service ({settings['rpc']['bind']})")
+    logger.info(f"JWT Service ({settings['rpc']['bind']})")
     await server.wait_closed()
 
 
