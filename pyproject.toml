@@ -14,7 +14,8 @@ dependencies = [
   "aiozmq",
   "pyjwt",
   "minicli",
-  "msgpack"
+  "msgpack",
+  "cryptography"
 ]
 
 [project.optional-dependencies]
